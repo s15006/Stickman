@@ -36,12 +36,13 @@ def collided_top(co1, co2):
 
 def collided_bottom(y, co1, co2):
     return (within_x(co1, co2) and
-            co2.y1 <= co1.y2 + y <= co2.y2)
+            co1.y2 <= co2.y1 <= co1.y2 + y)
 
 
 class Sprite:
     def __init__(self, game):
         self.game = game
+        self.gameover = False
         self.endgame = False
         self.coordinates = None
 
@@ -126,6 +127,8 @@ class StickFigureSprite(Sprite):
         game.canvas.bind_all('<KeyPress-Right>', self.turn_right)
         game.canvas.bind_all('<KeyPress-Down>', self.stop)
         game.canvas.bind_all('<space>', self.jump)
+        game.canvas.bind_all('<Button-1>', self.start)
+        self.starting = True
 
     def hide(self):
         self.game.canvas.itemconfig(self.image, state='hidden')
@@ -145,6 +148,13 @@ class StickFigureSprite(Sprite):
     def jump(self, evt):
         if self.f == 0:
             self.f = -13
+
+    def start(self, evt):
+        if self.starting:
+            start_image.hide()
+            self.game.running = True
+            self.first_time = int(time.time())
+            self.starting = False
 
     def animate(self):
         if self.x != 0 and self.y == 0:
@@ -194,7 +204,7 @@ class StickFigureSprite(Sprite):
         top = True
         bottom = True
         falling = True
-        if self.y > 0 and co.y2 >= self.game.canvas_height:
+        if self.y > 0 and co.y2 + self.y >= self.game.canvas_height:
             self.y = self.game.canvas_height - co.y2
             if self.y < 0:
                 self.y = 0
@@ -204,6 +214,7 @@ class StickFigureSprite(Sprite):
             self.y = 0
             self.f = 0
             top = False
+
         if self.x > 0 and co.x2 >= self.game.canvas_width:
             self.x = 0
             right = False
@@ -217,14 +228,23 @@ class StickFigureSprite(Sprite):
             if top and self.y < 0 and collided_top(co, sprite_co):
                 self.y = -self.y
                 top = False
-            if bottom and self.y > 0 and collided_bottom(self.y,
-                                                       co, sprite_co):
+                if sprite.gameover:
+                    self.over = DoorSprite(g, PhotoImage(file='gameover.gif'), 0, 0, 0, 0)
+                    self.over.show()
+                    self.game.canvas.create_text(250, 250, text="game over", font=("Times", 50))
+                    self.game.running = False
+            if bottom and co.y2 > 0 and collided_bottom(self.y, co, sprite_co):
                 self.y = sprite_co.y1 - co.y2
                 if self.y < 0:
                     self.y = 0
                 self.f = 0
                 bottom = False
                 top = False
+                if sprite.gameover:
+                    self.over = DoorSprite(g, PhotoImage(file='gameover.gif'), 0, 0, 0, 0)
+                    self.over.show()
+                    self.game.canvas.create_text(250, 250, text="game over", font=("Times", 50))
+                    self.game.running = False
             if bottom and falling and self.y == 0 \
                     and co.y2 < self.game.canvas_height \
                     and collided_bottom(1, co,sprite_co):
@@ -232,6 +252,11 @@ class StickFigureSprite(Sprite):
             if left and self.x < 0 and collided_left(co, sprite_co):
                     self.x = 0
                     left = False
+                    if sprite.gameover:
+                        self.over = DoorSprite(g, PhotoImage(file='gameover.gif'), 0, 0, 0, 0)
+                        self.over.show()
+                        self.game.canvas.create_text(250, 250, text="game over", font=("Times", 50))
+                        self.game.running = False
                     if sprite.endgame:
                         sf.hide()
                         door2.hide()
@@ -244,8 +269,12 @@ class StickFigureSprite(Sprite):
                         platform7.hide()
                         platform9.hide()
                         platform10.hide()
+                        enemy1.hide()
+                        enemy2.hide()
+                        enemy3.hide()
+                        enemy4.hide()
                         gameovertext.show()
-                        last_time = (int(time.time() - first_time))
+                        last_time = (int(time.time() - self.first_time))
                         timetext = TextLabel(g.canvas, 250, 250, ('Clear time %s' % last_time), 30, 'black')
                         timetext.show()
                         self.game.canvas.itemconfig(self.game.white, state='normal')
@@ -253,16 +282,52 @@ class StickFigureSprite(Sprite):
             if right and self.x > 0 and collided_right(co, sprite_co):
                     self.x = 0
                     right = False
+                    if sprite.gameover:
+                        self.over = DoorSprite(g, PhotoImage(file='gameover.gif'), 0, 0, 0, 0)
+                        self.over.show()
+                        self.game.canvas.create_text(250, 250, text="game over", font=("Times", 50))
+                        self.game.running = False
                     if sprite.endgame:
                         sf.hide()
                         door2.hide()
                         door1.show()
+                        platform2.hide()
+                        platform3.hide()
+                        platform4.hide()
+                        platform5.hide()
+                        platform6.hide()
+                        platform7.hide()
+                        platform9.hide()
+                        platform10.hide()
+                        enemy1.hide()
+                        enemy2.hide()
+                        enemy3.hide()
+                        enemy4.hide()
                         gameovertext.show()
+                        last_time = (int(time.time() - self.first_time))
+                        timetext = TextLabel(g.canvas, 250, 250, ('Clear time %s' % last_time), 30, 'black')
+                        timetext.show()
+                        self.game.canvas.itemconfig(self.game.white, state='normal')
                         self.game.running = False
         if falling and bottom and self.y == 0 \
                 and co.y2 < self.game.canvas_height:
                 self.f = 1
         self.game.canvas.move(self.image, self.x, self.y)
+
+
+class Enemy(Sprite):
+    def __init__(self, game, photo_image, x, y, width, height):
+        Sprite.__init__(self, game)
+        self.photo_image = photo_image
+        self.enemy = game.canvas.create_image(x, y,
+                                              image=self.photo_image,
+                                              anchor='nw')
+        self.coordinates = Coords(x, y, width, height)
+        self.gameover = True
+
+    def hide(self):
+        self.game.canvas.itemconfig(self.enemy, state='hidden')
+
 
 
 class DoorSprite(Sprite):
@@ -332,7 +397,7 @@ class Game:
         self.white = self.canvas.create_image(110, 110,
                                         image=self.bg[4], anchor='nw', state='hidden')
         self.sprites = []
-        self.running = True
+        self.running = False
         self.tk.after(10, self.mainloop)
 
     def mainloop(self):
@@ -381,12 +446,21 @@ if __name__ == "__main__":
     g.sprites.append(platform8)
     g.sprites.append(platform9)
     g.sprites.append(platform10)
-    door1 = DoorSprite(g, PhotoImage(file="door1.gif"), 45, 30, 40 ,35)
+    door1 = DoorSprite(g, PhotoImage(file="door1.gif"), 45, 30, 40, 35)
     door2 = DoorSprite(g, PhotoImage(file="door2.gif"), 45, 30, 40, 35)
     door2.show()
     g.sprites.append(door2)
+    enemy1 = Enemy(g, PhotoImage(file="bomb.gif"), 45, 70, 75, 100)
+    g.sprites.append(enemy1)
+    enemy2 = Enemy(g, PhotoImage(file="bomb.gif"), 0, 220, 30, 250)
+    g.sprites.append(enemy2)
+    enemy3 = Enemy(g, PhotoImage(file="bomb.gif"), 470, 400, 500, 430)
+    g.sprites.append(enemy3)
+    enemy4 = Enemy(g, PhotoImage(file="bomb.gif"), 340, 270, 370,300)
+    g.sprites.append(enemy4)
     gameovertext = TextLabel(g.canvas, 250, 180, '"You Win!"', 41, 'black')
-    first_time = int(time.time())
     sf = StickFigureSprite(g)
     g.sprites.append(sf)
+    start_image = DoorSprite(g, PhotoImage(file='start.gif'), 10, 10, 10, 10)
+    start_image.show()
     g.tk.mainloop()
